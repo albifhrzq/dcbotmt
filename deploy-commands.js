@@ -41,11 +41,11 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
     console.log('⏳ Mengirim slash command...');
     await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID),
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
       { body: commands }
     );
-    console.log('✅ Slash command berhasil dikirim!');
+    console.log('✅ Slash command berhasil dikirim (khusus ke guild)!');
   } catch (error) {
-    console.error('❌ Gagal mengirim slash command:', error);
-  }
-})();
