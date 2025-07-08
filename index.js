@@ -8,6 +8,7 @@ const client = new Client({
 
 const N8N_WEBHOOK_CATAT = process.env.N8N_WEBHOOK_CATAT;
 const N8N_WEBHOOK_SALDO = process.env.N8N_WEBHOOK_SALDO;
+const N8N_WEBHOOK_RIWAYAT = process.env.N8N_WEBHOOK_RIWAYAT;
 
 client.once('ready', () => {
   console.log(`✅ Bot login sebagai ${client.user.tag}`);
@@ -16,16 +17,13 @@ client.once('ready', () => {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  const user = interaction.user.username;
-
-  // --- CATAT TRANSAKSI ---
+  // ---- /catat ----
   if (interaction.commandName === 'catat') {
-    await interaction.deferReply(); // kasih waktu biar gak timeout
-
     const tipe = interaction.options.getString('tipe');
     const jumlah = interaction.options.getInteger('jumlah');
     const keterangan = interaction.options.getString('keterangan');
     const kategori = interaction.options.getString('kategori');
+    const user = interaction.user.username;
 
     try {
       await axios.post(N8N_WEBHOOK_CATAT, {
@@ -33,39 +31,68 @@ client.on(Events.InteractionCreate, async (interaction) => {
         jumlah,
         keterangan,
         kategori,
-        user, // ini dipakai buat filter di sheets
+        user,
       });
 
-      await interaction.editReply(
+      await interaction.reply(
         `✅ ${tipe} Rp${jumlah.toLocaleString()} untuk "${keterangan}" ` +
         `dengan kategori *${kategori}* berhasil dicatat!`
       );
     } catch (err) {
       console.error('❌ Gagal kirim ke n8n:', err.message);
-      await interaction.editReply('❌ Gagal kirim ke n8n!');
+      await interaction.reply('❌ Gagal kirim ke n8n!');
     }
   }
 
-  // --- CEK SALDO ---
+  // ---- /saldo ----
   if (interaction.commandName === 'saldo') {
-    await interaction.deferReply();
-
     try {
-      const res = await axios.get(N8N_WEBHOOK_SALDO, {
-        params: { user } // kirim username sebagai query param
-      });
-
+      const res = await axios.get(N8N_WEBHOOK_SALDO);
       const { totalMasuk, totalKeluar, saldo } = res.data;
 
-      await interaction.editReply(
-        `📊 Saldo untuk *${user}*:\n` +
+      await interaction.reply(
+        `📊 Saldo saat ini:\n` +
         `➕ Masuk: Rp${totalMasuk.toLocaleString()}\n` +
         `➖ Keluar: Rp${totalKeluar.toLocaleString()}\n` +
         `💰 Sisa Saldo: Rp${saldo.toLocaleString()}`
       );
     } catch (err) {
       console.error('❌ Gagal ambil saldo dari n8n:', err.message);
-      await interaction.editReply('❌ Gagal ambil saldo dari n8n!');
+      await interaction.reply('❌ Gagal ambil saldo dari n8n!');
+    }
+  }
+
+  // ---- /riwayat ----
+  if (interaction.commandName === 'riwayat') {
+    const user = interaction.user.username;
+
+    try {
+      const res = await axios.get(N8N_WEBHOOK_RIWAYAT, {
+        params: { user }
+      });
+
+      const transaksi = res.data;
+
+      if (!transaksi.length) {
+        return await interaction.reply('📭 Belum ada transaksi tercatat!');
+      }
+
+      const format = transaksi
+        .map((item, i) =>
+          `${i + 1}. [${item.Tipe}] Rp${Number(item.Jumlah).toLocaleString()} - ${item.Keterangan} (${item.Kategori})`
+        )
+        .join('\n');
+
+      const chunks = format.match(/(.|[\r\n]){1,1900}/g);
+
+      await interaction.reply({ content: chunks[0] });
+      for (let i = 1; i < chunks.length; i++) {
+        await interaction.followUp({ content: chunks[i] });
+      }
+
+    } catch (err) {
+      console.error('❌ Gagal ambil riwayat:', err.message);
+      await interaction.reply('❌ Gagal ambil riwayat dari n8n!');
     }
   }
 });
