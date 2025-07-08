@@ -18,6 +18,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   // --- CATAT TRANSAKSI ---
   if (interaction.commandName === 'catat') {
+    await interaction.deferReply(); // ⏳ biar Discord tau kita butuh waktu
+
     const tipe = interaction.options.getString('tipe');
     const jumlah = interaction.options.getInteger('jumlah');
     const keterangan = interaction.options.getString('keterangan');
@@ -33,23 +35,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
         user,
       });
 
-      await interaction.reply(
+      await interaction.editReply(
         `✅ ${tipe} Rp${jumlah.toLocaleString()} untuk "${keterangan}" ` +
         `dengan kategori *${kategori}* berhasil dicatat!`
       );
     } catch (err) {
       console.error('❌ Gagal kirim ke n8n:', err.message);
-      await interaction.reply('❌ Gagal kirim ke n8n!');
+      await interaction.editReply('❌ Gagal kirim ke n8n!');
     }
   }
 
   // --- CEK SALDO ---
   if (interaction.commandName === 'saldo') {
+    await interaction.deferReply(); // ⏳ antisipasi delay dari axios.get()
+
     try {
       const res = await axios.get(N8N_WEBHOOK_SALDO);
       const { totalMasuk, totalKeluar, saldo } = res.data;
 
-      await interaction.reply(
+      await interaction.editReply(
         `📊 Saldo saat ini:\n` +
         `➕ Masuk: Rp${totalMasuk.toLocaleString()}\n` +
         `➖ Keluar: Rp${totalKeluar.toLocaleString()}\n` +
@@ -57,7 +61,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       );
     } catch (err) {
       console.error('❌ Gagal ambil saldo dari n8n:', err.message);
-      await interaction.reply('❌ Gagal ambil saldo dari n8n!');
+      await interaction.editReply('❌ Gagal ambil saldo dari n8n!');
     }
   }
 });
