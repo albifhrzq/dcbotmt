@@ -26,13 +26,17 @@ const commands = [
     )
     .addStringOption(opt =>
       opt.setName('kategori')
-        .setDescription('Kategori transaksi (contoh: makanan, transportasi, dll)')
+        .setDescription('Kategori transaksi (makanan, transportasi, dll)')
         .setRequired(true)
     ),
 
   new SlashCommandBuilder()
     .setName('saldo')
     .setDescription('Lihat saldo saat ini'),
+
+  new SlashCommandBuilder()
+    .setName('riwayat')
+    .setDescription('Lihat riwayat transaksi'),
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -41,13 +45,10 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
     console.log('⏳ Mengirim slash command...');
     await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
-      ),
+      Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands }
     );
-    console.log('✅ Slash command berhasil dikirim (khusus ke guild)!');
+    console.log('✅ Slash command berhasil dikirim!');
   } catch (error) {
     console.error('❌ Gagal mengirim slash command:', error);
   }
