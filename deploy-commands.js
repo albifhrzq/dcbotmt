@@ -49,3 +49,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     );
     console.log('✅ Slash command berhasil dikirim (khusus ke guild)!');
   } catch (error) {
+    console.error('❌ Gagal mengirim slash command:', error);
+  }
+})();
