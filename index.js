@@ -26,6 +26,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const user = interaction.user.username;
 
     try {
+      await interaction.deferReply();
+
       await axios.post(N8N_WEBHOOK_CATAT, {
         tipe,
         jumlah,
@@ -34,23 +36,29 @@ client.on(Events.InteractionCreate, async (interaction) => {
         user,
       });
 
-      await interaction.reply(
+      await interaction.editReply(
         `✅ ${tipe} Rp${jumlah.toLocaleString()} untuk "${keterangan}" ` +
         `dengan kategori *${kategori}* berhasil dicatat!`
       );
     } catch (err) {
       console.error('❌ Gagal kirim ke n8n:', err.message);
-      await interaction.reply('❌ Gagal kirim ke n8n!');
+      if (interaction.deferred) {
+        await interaction.editReply('❌ Gagal kirim ke n8n!');
+      } else {
+        await interaction.reply('❌ Gagal kirim ke n8n!');
+      }
     }
   }
 
   // ---- /saldo ----
   if (interaction.commandName === 'saldo') {
     try {
+      await interaction.deferReply();
+
       const res = await axios.get(N8N_WEBHOOK_SALDO);
       const { totalMasuk, totalKeluar, saldo } = res.data;
 
-      await interaction.reply(
+      await interaction.editReply(
         `📊 Saldo saat ini:\n` +
         `➕ Masuk: Rp${totalMasuk.toLocaleString()}\n` +
         `➖ Keluar: Rp${totalKeluar.toLocaleString()}\n` +
@@ -58,7 +66,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       );
     } catch (err) {
       console.error('❌ Gagal ambil saldo dari n8n:', err.message);
-      await interaction.reply('❌ Gagal ambil saldo dari n8n!');
+      if (interaction.deferred) {
+        await interaction.editReply('❌ Gagal ambil saldo dari n8n!');
+      } else {
+        await interaction.reply('❌ Gagal ambil saldo dari n8n!');
+      }
     }
   }
 
@@ -67,6 +79,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const user = interaction.user.username;
 
     try {
+      await interaction.deferReply();
+
       const res = await axios.get(N8N_WEBHOOK_RIWAYAT, {
         params: { user }
       });
@@ -74,7 +88,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const transaksi = res.data;
 
       if (!transaksi.length) {
-        return await interaction.reply('📭 Belum ada transaksi tercatat!');
+        return await interaction.editReply('📭 Belum ada transaksi tercatat!');
       }
 
       const format = transaksi
@@ -85,14 +99,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const chunks = format.match(/(.|[\r\n]){1,1900}/g);
 
-      await interaction.reply({ content: chunks[0] });
+      await interaction.editReply({ content: chunks[0] });
       for (let i = 1; i < chunks.length; i++) {
         await interaction.followUp({ content: chunks[i] });
       }
 
     } catch (err) {
       console.error('❌ Gagal ambil riwayat:', err.message);
-      await interaction.reply('❌ Gagal ambil riwayat dari n8n!');
+      if (interaction.deferred) {
+        await interaction.editReply('❌ Gagal ambil riwayat dari n8n!');
+      } else {
+        await interaction.reply('❌ Gagal ambil riwayat dari n8n!');
+      }
     }
   }
 });
