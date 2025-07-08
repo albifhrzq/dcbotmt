@@ -16,15 +16,16 @@ client.once('ready', () => {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
+  const user = interaction.user.username;
+
   // --- CATAT TRANSAKSI ---
   if (interaction.commandName === 'catat') {
-    await interaction.deferReply(); // ⏳ biar Discord tau kita butuh waktu
+    await interaction.deferReply(); // kasih waktu biar gak timeout
 
     const tipe = interaction.options.getString('tipe');
     const jumlah = interaction.options.getInteger('jumlah');
     const keterangan = interaction.options.getString('keterangan');
     const kategori = interaction.options.getString('kategori');
-    const user = interaction.user.username;
 
     try {
       await axios.post(N8N_WEBHOOK_CATAT, {
@@ -32,7 +33,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         jumlah,
         keterangan,
         kategori,
-        user,
+        user, // ini dipakai buat filter di sheets
       });
 
       await interaction.editReply(
@@ -47,14 +48,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   // --- CEK SALDO ---
   if (interaction.commandName === 'saldo') {
-    await interaction.deferReply(); // ⏳ antisipasi delay dari axios.get()
+    await interaction.deferReply();
 
     try {
-      const res = await axios.get(N8N_WEBHOOK_SALDO);
+      const res = await axios.get(N8N_WEBHOOK_SALDO, {
+        params: { user } // kirim username sebagai query param
+      });
+
       const { totalMasuk, totalKeluar, saldo } = res.data;
 
       await interaction.editReply(
-        `📊 Saldo saat ini:\n` +
+        `📊 Saldo untuk *${user}*:\n` +
         `➕ Masuk: Rp${totalMasuk.toLocaleString()}\n` +
         `➖ Keluar: Rp${totalKeluar.toLocaleString()}\n` +
         `💰 Sisa Saldo: Rp${saldo.toLocaleString()}`
