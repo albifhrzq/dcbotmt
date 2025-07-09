@@ -17,16 +17,18 @@ client.once('ready', () => {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  // ---- /catat ----
-  if (interaction.commandName === 'catat') {
-    const tipe = interaction.options.getString('tipe');
-    const jumlah = interaction.options.getInteger('jumlah');
-    const keterangan = interaction.options.getString('keterangan');
-    const kategori = interaction.options.getString('kategori');
-    const user = interaction.user.username;
+  const command = interaction.commandName;
+  const user = interaction.user.username;
 
-    try {
-      await interaction.deferReply();
+  try {
+    await interaction.deferReply();
+
+    // ==== /catat ====
+    if (command === 'catat') {
+      const tipe = interaction.options.getString('tipe');
+      const jumlah = interaction.options.getInteger('jumlah');
+      const keterangan = interaction.options.getString('keterangan');
+      const kategori = interaction.options.getString('kategori');
 
       await axios.post(N8N_WEBHOOK_CATAT, {
         tipe,
@@ -36,58 +38,34 @@ client.on(Events.InteractionCreate, async (interaction) => {
         user,
       });
 
-      await interaction.editReply(
+      return await interaction.editReply(
         `✅ ${tipe} Rp${jumlah.toLocaleString()} untuk "${keterangan}" ` +
         `dengan kategori *${kategori}* berhasil dicatat!`
       );
-    } catch (err) {
-      console.error('❌ Gagal kirim ke n8n:', err.message);
-      if (interaction.deferred) {
-        await interaction.editReply('❌ Gagal kirim ke n8n!');
-      } else {
-        await interaction.reply('❌ Gagal kirim ke n8n!');
-      }
     }
-  }
 
-  // ---- /saldo ----
-  if (interaction.commandName === 'saldo') {
-    try {
-      await interaction.deferReply();
-
+    // ==== /saldo ====
+    if (command === 'saldo') {
       const res = await axios.get(N8N_WEBHOOK_SALDO);
       const { totalMasuk, totalKeluar, saldo } = res.data;
 
-      await interaction.editReply(
+      return await interaction.editReply(
         `📊 Saldo saat ini:\n` +
         `➕ Masuk: Rp${totalMasuk.toLocaleString()}\n` +
         `➖ Keluar: Rp${totalKeluar.toLocaleString()}\n` +
         `💰 Sisa Saldo: Rp${saldo.toLocaleString()}`
       );
-    } catch (err) {
-      console.error('❌ Gagal ambil saldo dari n8n:', err.message);
-      if (interaction.deferred) {
-        await interaction.editReply('❌ Gagal ambil saldo dari n8n!');
-      } else {
-        await interaction.reply('❌ Gagal ambil saldo dari n8n!');
-      }
     }
-  }
 
-  // ---- /riwayat ----
-  if (interaction.commandName === 'riwayat') {
-    const user = interaction.user.username;
-
-    try {
-      await interaction.deferReply();
-
+    // ==== /riwayat ====
+    if (command === 'riwayat') {
       const res = await axios.get(N8N_WEBHOOK_RIWAYAT, {
         params: { user }
       });
 
       const transaksi = res.data;
 
-      if (!transaksi.length) {
+      if (!Array.isArray(transaksi) || transaksi.length === 0) {
         return await interaction.editReply('📭 Belum ada transaksi tercatat!');
       }
 
@@ -100,17 +78,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const chunks = format.match(/(.|[\r\n]){1,1900}/g);
 
       await interaction.editReply({ content: chunks[0] });
+
       for (let i = 1; i < chunks.length; i++) {
         await interaction.followUp({ content: chunks[i] });
       }
 
-    } catch (err) {
-      console.error('❌ Gagal ambil riwayat:', err.message);
-      if (interaction.deferred) {
-        await interaction.editReply('❌ Gagal ambil riwayat dari n8n!');
-      } else {
-        await interaction.reply('❌ Gagal ambil riwayat dari n8n!');
-      }
+      return;
+    }
+
+  } catch (err) {
+    console.error(`❌ Error saat jalankan perintah ${interaction.commandName}:`, err.message);
+    if (interaction.deferred) {
+      await interaction.editReply(`❌ Terjadi kesalahan saat memproses perintah.`);
+    } else {
+      await interaction.reply(`❌ Terjadi kesalahan saat memproses perintah.`);
     }
   }
 });
